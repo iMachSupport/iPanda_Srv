@@ -22,7 +22,7 @@ export const authenticationMiddleware: RequestHandler = (req, _res, next) => {
     sessionId: getHeader(req, "x-session-id"),
     correlationId: getHeader(req, "x-correlation-id") ?? randomUUID(),
     roles: parseRoles(getHeader(req, "x-user-roles")),
-    callerToken: getHeader(req, "x-caller-token"),
+    callerToken: getHeader(req, "x-caller-token") ?? getHeader(req, "x-session-id"),
   };
 
   (req as AuthenticatedRequest).auth = auth;
