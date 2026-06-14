@@ -26,6 +26,7 @@ export class ToolRuntimeActionExecutorService implements RuntimeActionExecutorSe
       tenantId: context.request.identity.tenantId,
       userId: context.request.identity.userId,
       correlationId: action.id,
+      callerToken: context.request.identity.callerToken,
       input,
       context: {
         runtimeContextId: context.id,

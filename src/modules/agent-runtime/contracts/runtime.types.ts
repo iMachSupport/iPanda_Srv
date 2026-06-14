@@ -6,6 +6,7 @@ export interface RuntimeIdentity {
   tenantId: string;
   userId: string;
   sessionId?: string;
+  callerToken?: string;
 }
 
 export interface RuntimeRequest {

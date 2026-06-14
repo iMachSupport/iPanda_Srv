@@ -7,6 +7,7 @@ export interface AuthContext {
   sessionId?: string;
   correlationId?: string;
   roles: string[];
+  callerToken?: string;
 }
 
 export type AuthenticatedRequest = Request & {

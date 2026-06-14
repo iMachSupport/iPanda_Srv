@@ -5,6 +5,7 @@ export interface ToolExecutionContext {
   tenantId: string;
   userId: string;
   correlationId?: string;
+  callerToken?: string;
   runtimeContext?: Record<string, unknown>;
 }
 

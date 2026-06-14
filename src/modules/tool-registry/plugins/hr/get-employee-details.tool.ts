@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { iMach360ConnectorPort } from "../../../imach360-connector/contracts/imach360-connector.port";
 import type { ToolExecutionContext, ToolPlugin, ToolPluginFactory } from "../../contracts/tool-plugin.contracts";
 import type { ToolDefinition, ToolExecutionRequest, ToolExecutionResult } from "../../contracts/tool-registry.port";
 
@@ -13,10 +14,13 @@ const GetEmployeeDetailsInputSchema = z
 const GetEmployeeDetailsOutputSchema = z
   .object({
     employeeId: z.string().min(1),
+    empId: z.string().min(1),
     displayName: z.string().min(1),
     email: z.string().optional(),
     department: z.string().optional(),
-    managerId: z.string().optional()
+    jobTitle: z.string().optional(),
+    managerId: z.string().optional(),
+    employmentStatus: z.enum(["active", "inactive"]).optional()
   })
   .strict();
 
@@ -27,12 +31,17 @@ export abstract class GetEmployeeDetailsTool implements ToolPlugin {
   public readonly definition: ToolDefinition = {
     id: GET_EMPLOYEE_DETAILS_TOOL_ID,
     name: "GetEmployeeDetails",
-    description: "Retrieves employee profile and organizational assignment details.",
-    version: "1.0.0",
-    providerType: "sap" as const,
+    description:
+      "Retrieves the full employee profile including name, email, department, job title, and manager. Use when the user asks about a specific person's details or organizational assignment.",
+    version: "2.0.0",
+    providerType: "internal" as const,
     executionMode: "sync" as const,
     enabled: true,
-    tags: ["hr", "employee", "sap"],
+    tags: ["hr", "employee"],
+    metadata: {
+      domain: "employee",
+      sourceSystem: "imach360"
+    },
     inputSchema: {
       type: "object",
       required: ["employeeId"],
@@ -40,20 +49,23 @@ export abstract class GetEmployeeDetailsTool implements ToolPlugin {
       properties: {
         employeeId: {
           type: "string",
-          description: "Enterprise employee identifier."
+          description: "The employee identifier (MongoDB _id or emp_id)."
         }
       }
     },
     outputSchema: {
       type: "object",
-      required: ["employeeId", "displayName"],
+      required: ["employeeId", "empId", "displayName"],
       additionalProperties: false,
       properties: {
         employeeId: { type: "string" },
+        empId: { type: "string" },
         displayName: { type: "string" },
         email: { type: "string" },
         department: { type: "string" },
-        managerId: { type: "string" }
+        jobTitle: { type: "string" },
+        managerId: { type: "string" },
+        employmentStatus: { type: "string", enum: ["active", "inactive"] }
       }
     }
   };
@@ -64,24 +76,48 @@ export abstract class GetEmployeeDetailsTool implements ToolPlugin {
   ): Promise<ToolExecutionResult>;
 }
 
-class GetEmployeeDetailsToolPlaceholder extends GetEmployeeDetailsTool {
+export class iMach360GetEmployeeDetailsTool extends GetEmployeeDetailsTool {
+  public constructor(private readonly connector: iMach360ConnectorPort) {
+    super();
+  }
+
   public override async execute(
     request: ToolExecutionRequest,
-    _context: ToolExecutionContext
+    context: ToolExecutionContext
   ): Promise<ToolExecutionResult> {
+    const input = GetEmployeeDetailsInputSchema.parse(request.input);
+
+    const response = await this.connector.getEmployeeById({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      correlationId: context.correlationId,
+      callerToken: context.callerToken,
+      employeeId: input.employeeId
+    });
+
+    const { employee } = response;
+
     return {
       toolId: this.definition.id,
-      executionId: request.correlationId ?? `${this.definition.id}:pending`,
-      status: "failed",
-      output: null,
-      error: {
-        code: "TOOL_NOT_IMPLEMENTED",
-        message: "GetEmployeeDetails implementation is pending."
+      executionId: context.correlationId ?? `${this.definition.id}:${Date.now()}`,
+      status: "succeeded",
+      output: {
+        employeeId: employee.id,
+        empId: employee.empId,
+        displayName: employee.displayName,
+        email: employee.email,
+        department: employee.department,
+        jobTitle: employee.jobTitle,
+        managerId: employee.managerId,
+        employmentStatus: employee.employmentStatus
+      },
+      metadata: {
+        sourceSystem: response.sourceSystem
       }
     };
   }
 }
 
-export const getEmployeeDetailsToolFactory: ToolPluginFactory = {
-  create: () => new GetEmployeeDetailsToolPlaceholder()
-};
+export const createGetEmployeeDetailsToolFactory = (connector: iMach360ConnectorPort): ToolPluginFactory => ({
+  create: () => new iMach360GetEmployeeDetailsTool(connector)
+});

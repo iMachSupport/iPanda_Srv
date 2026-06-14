@@ -15,8 +15,27 @@ export const createApp = async () => {
 
   app.locals.container = container;
 
+  const allowedOrigins = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+    : true; // allow all in development
+
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      methods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: [
+        "Content-Type",
+        "x-tenant-id",
+        "x-user-id",
+        "x-session-id",
+        "x-correlation-id",
+        "x-user-roles",
+        "x-caller-token",
+      ],
+      maxAge: 600, // cache preflight for 10 minutes
+    })
+  );
   app.use(helmet());
-  app.use(cors());
   app.use(express.json({ limit: "1mb" }));
   app.use(pinoHttp({ logger }));
 

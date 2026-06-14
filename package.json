@@ -4,6 +4,9 @@
   "description": "Enterprise AI coworker agent runtime platform for SAP ecosystems.",
   "private": true,
   "type": "commonjs",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",

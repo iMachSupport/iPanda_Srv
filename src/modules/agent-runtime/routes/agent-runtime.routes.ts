@@ -44,7 +44,8 @@ const toRuntimeRequest = (
     identity: {
       tenantId: auth.tenantId,
       userId: auth.userId,
-      sessionId: auth.sessionId
+      sessionId: auth.sessionId,
+      callerToken: auth.callerToken,
     },
     input: {
       message: body.input?.message ?? body.message ?? "",

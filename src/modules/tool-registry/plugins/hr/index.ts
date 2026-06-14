@@ -1,13 +1,14 @@
+import type { iMach360ConnectorPort } from "../../../imach360-connector/contracts/imach360-connector.port";
 import type { ToolPluginModule } from "../../contracts/tool-plugin.contracts";
 import { createLeaveRequestToolFactory } from "./create-leave-request.tool";
-import { getEmployeeDetailsToolFactory } from "./get-employee-details.tool";
-import { getLeaveBalanceToolFactory } from "./get-leave-balance.tool";
+import { createGetEmployeeDetailsToolFactory } from "./get-employee-details.tool";
+import { createGetLeaveBalanceToolFactory } from "./get-leave-balance.tool";
 
-export const hrToolPluginModule: ToolPluginModule = {
+export const createHrToolPluginModule = (connector: iMach360ConnectorPort): ToolPluginModule => ({
   namespace: "hr",
   tools: [
-    getLeaveBalanceToolFactory,
-    getEmployeeDetailsToolFactory,
-    createLeaveRequestToolFactory
+    createGetLeaveBalanceToolFactory(connector),
+    createGetEmployeeDetailsToolFactory(connector),
+    createLeaveRequestToolFactory(connector)
   ]
-};
+});

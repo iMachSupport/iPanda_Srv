@@ -32,6 +32,7 @@ export interface ToolExecutionRequest {
   tenantId: string;
   userId: string;
   correlationId?: string;
+  callerToken?: string;
   input: Record<string, unknown>;
   context?: Record<string, unknown>;
 }

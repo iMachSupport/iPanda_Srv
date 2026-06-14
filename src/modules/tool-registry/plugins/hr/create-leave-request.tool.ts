@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { iMach360ConnectorPort } from "../../../imach360-connector/contracts/imach360-connector.port";
 import type { ToolExecutionContext, ToolPlugin, ToolPluginFactory } from "../../contracts/tool-plugin.contracts";
 import type { ToolDefinition, ToolExecutionRequest, ToolExecutionResult } from "../../contracts/tool-registry.port";
 
@@ -8,16 +9,16 @@ const CreateLeaveRequestInputSchema = z
   .object({
     employeeId: z.string().min(1),
     leaveType: z.string().min(1),
-    startDate: z.string().min(1),
-    endDate: z.string().min(1),
+    fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fromDate must be in ISO-8601 date format (YYYY-MM-DD)"),
+    toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "toDate must be in ISO-8601 date format (YYYY-MM-DD)"),
     reason: z.string().optional()
   })
   .strict();
 
 const CreateLeaveRequestOutputSchema = z
   .object({
-    requestId: z.string().min(1),
-    status: z.enum(["submitted", "pending-approval", "rejected"])
+    leaveId: z.string().min(1),
+    status: z.enum(["submitted", "pending-approval"])
   })
   .strict();
 
@@ -28,48 +29,55 @@ export abstract class CreateLeaveRequestTool implements ToolPlugin {
   public readonly definition: ToolDefinition = {
     id: CREATE_LEAVE_REQUEST_TOOL_ID,
     name: "CreateLeaveRequest",
-    description: "Creates a leave request for an employee.",
-    version: "1.0.0",
-    providerType: "sap" as const,
+    description:
+      "Submits a new leave request for an employee. Use only when the user explicitly asks to apply for, book, or request leave. Requires approval before the leave is confirmed.",
+    version: "2.0.0",
+    providerType: "internal" as const,
     executionMode: "sync" as const,
     enabled: true,
-    tags: ["hr", "leave", "sap", "transactional"],
+    tags: ["hr", "leave", "transactional"],
+    metadata: {
+      domain: "leave",
+      sourceSystem: "imach360",
+      requiresApproval: true
+    },
     inputSchema: {
       type: "object",
-      required: ["employeeId", "leaveType", "startDate", "endDate"],
+      required: ["employeeId", "leaveType", "fromDate", "toDate"],
       additionalProperties: false,
       properties: {
         employeeId: {
           type: "string",
-          description: "Enterprise employee identifier."
+          description: "The employee identifier submitting the leave request."
         },
         leaveType: {
           type: "string",
-          description: "Leave type code."
+          description: "Leave type code (e.g. 'annual', 'sick', 'casual')."
         },
-        startDate: {
+        fromDate: {
           type: "string",
-          description: "Leave start date in ISO-8601 date format."
+          description: "Leave start date in ISO-8601 format (YYYY-MM-DD)."
         },
-        endDate: {
+        toDate: {
           type: "string",
-          description: "Leave end date in ISO-8601 date format."
+          description: "Leave end date in ISO-8601 format (YYYY-MM-DD)."
         },
         reason: {
           type: "string",
-          description: "Optional employee-entered reason."
+          description: "Optional reason for the leave request."
         }
       }
     },
     outputSchema: {
       type: "object",
-      required: ["requestId", "status"],
+      required: ["leaveId", "status"],
       additionalProperties: false,
       properties: {
-        requestId: { type: "string" },
+        leaveId: { type: "string", description: "The created leave request ID." },
         status: {
           type: "string",
-          enum: ["submitted", "pending-approval", "rejected"]
+          enum: ["submitted", "pending-approval"],
+          description: "Submission status. Leave requires manager approval."
         }
       }
     }
@@ -81,24 +89,45 @@ export abstract class CreateLeaveRequestTool implements ToolPlugin {
   ): Promise<ToolExecutionResult>;
 }
 
-class CreateLeaveRequestToolPlaceholder extends CreateLeaveRequestTool {
+export class iMach360CreateLeaveRequestTool extends CreateLeaveRequestTool {
+  public constructor(private readonly connector: iMach360ConnectorPort) {
+    super();
+  }
+
   public override async execute(
     request: ToolExecutionRequest,
-    _context: ToolExecutionContext
+    context: ToolExecutionContext
   ): Promise<ToolExecutionResult> {
+    const input = CreateLeaveRequestInputSchema.parse(request.input);
+
+    const response = await this.connector.createLeaveRequest({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      correlationId: context.correlationId,
+      callerToken: context.callerToken,
+      employeeId: input.employeeId,
+      leaveType: input.leaveType,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      reason: input.reason
+    });
+
     return {
       toolId: this.definition.id,
-      executionId: request.correlationId ?? `${this.definition.id}:pending`,
-      status: "failed",
-      output: null,
-      error: {
-        code: "TOOL_NOT_IMPLEMENTED",
-        message: "CreateLeaveRequest implementation is pending."
+      executionId: context.correlationId ?? `${this.definition.id}:${Date.now()}`,
+      status: "succeeded",
+      output: {
+        leaveId: response.leaveId,
+        status: response.status
+      },
+      metadata: {
+        sourceSystem: response.sourceSystem,
+        employeeId: input.employeeId
       }
     };
   }
 }
 
-export const createLeaveRequestToolFactory: ToolPluginFactory = {
-  create: () => new CreateLeaveRequestToolPlaceholder()
-};
+export const createLeaveRequestToolFactory = (connector: iMach360ConnectorPort): ToolPluginFactory => ({
+  create: () => new iMach360CreateLeaveRequestTool(connector)
+});

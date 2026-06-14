@@ -89,10 +89,11 @@ export class InMemoryToolRegistryService implements ToolRegistryPort, ToolRegist
         input
       },
       {
-      tenantId: request.tenantId,
-      userId: request.userId,
-      correlationId: request.correlationId,
-      runtimeContext: request.context
+        tenantId: request.tenantId,
+        userId: request.userId,
+        correlationId: request.correlationId,
+        callerToken: request.callerToken,
+        runtimeContext: request.context,
       }
     );
 
