@@ -95,7 +95,7 @@ export class DefaultImachio360ConnectorService extends iMach360ConnectorService 
       const response = await this.httpAdapter.execute({
         context: this.toRequestContext(request),
         method: "GET",
-        path: `/api/leaves/user/${encodeURIComponent(request.employeeId)}`
+        path: "/api/leaves"
       });
 
       const leaves = mapLeaveList(response.data);
@@ -115,10 +115,6 @@ export class DefaultImachio360ConnectorService extends iMach360ConnectorService 
 
   public override async listLeaves(request: ListLeavesRequest): Promise<ListLeavesResponse> {
     return this.withAudit("listLeaves", request, async () => {
-      const path = request.employeeId
-        ? `/api/leaves/user/${encodeURIComponent(request.employeeId)}`
-        : "/api/leaves";
-
       const query: Record<string, string | number | boolean> = {};
 
       if (request.status) query["status"] = request.status;
@@ -126,14 +122,17 @@ export class DefaultImachio360ConnectorService extends iMach360ConnectorService 
       const response = await this.httpAdapter.execute({
         context: this.toRequestContext(request),
         method: "GET",
-        path,
+        path: "/api/leaves",
         query
       });
 
       const leaves = mapLeaveList(response.data);
-      const filtered = request.status
-        ? leaves.filter((l) => l.status === request.status)
+      const byEmployee = request.employeeId
+        ? leaves.filter((l) => l.userId === request.employeeId)
         : leaves;
+      const filtered = request.status
+        ? byEmployee.filter((l) => l.status === request.status)
+        : byEmployee;
 
       return {
         leaves: filtered,

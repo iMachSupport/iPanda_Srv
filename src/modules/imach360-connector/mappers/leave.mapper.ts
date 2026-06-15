@@ -100,6 +100,7 @@ export const computeLeaveBalance = (
   const usedDays = leaves
     .filter(
       (l) =>
+        l.userId === userId &&
         l.status === "approved" &&
         new Date(l.fromDate).getFullYear() === currentYear &&
         (!leaveType || l.leaveType === leaveType)
