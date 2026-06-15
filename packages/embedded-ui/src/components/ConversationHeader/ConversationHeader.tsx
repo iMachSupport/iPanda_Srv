@@ -45,7 +45,7 @@ export const ConversationHeader: React.FC = () => {
           <SmartToyIcon color="primary" sx={{ fontSize: 22 }} />
         )}
         <Typography variant="h6" noWrap sx={{ fontWeight: 600 }}>
-          {name}
+          iPanda
         </Typography>
       </Box>
 

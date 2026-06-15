@@ -1,5 +1,6 @@
 // Main panel component
 export { IPandaPanel } from "./components/IPandaPanel/IPandaPanel";
+export { FloatingButton } from "./components/FloatingButton/FloatingButton";
 
 // SDK
 export { IPandaClient, IPandaClientError } from "./sdk/IPandaClient";

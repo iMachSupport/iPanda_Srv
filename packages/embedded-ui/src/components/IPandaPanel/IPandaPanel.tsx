@@ -55,11 +55,8 @@ const PanelInner: React.FC<Pick<IPandaPanelProps, "position" | "context">> = ({
     <Drawer
       anchor={anchor}
       open={isOpen}
-      variant="persistent"
+      variant="temporary"
       sx={{
-        width: isOpen ? PANEL_WIDTH : 0,
-        flexShrink: 0,
-        transition: tokens.transition.panel,
         zIndex: tokens.zIndex.panel,
         "& .MuiDrawer-paper": {
           width: PANEL_WIDTH,
@@ -69,11 +66,15 @@ const PanelInner: React.FC<Pick<IPandaPanelProps, "position" | "context">> = ({
           top: 0,
           height: "100vh",
           overflow: "hidden",
-          transition: tokens.transition.panel,
+          pointerEvents: "auto", // Re-enable clicks inside the drawer panel
         },
       }}
       PaperProps={{ elevation: 0 }}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{
+        keepMounted: true,
+        hideBackdrop: true, // Hide the gray modal backdrop
+        style: { pointerEvents: "none" }, // Allow clicks to pass through the modal container to the parent app
+      }}
       aria-label="iPanda assistant panel"
     >
       <ChatWindow onSubmit={submit} />
