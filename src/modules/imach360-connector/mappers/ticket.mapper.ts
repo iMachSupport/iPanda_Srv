@@ -32,12 +32,19 @@ export const mapTicket = (raw: unknown): iMach360Ticket => {
     );
   }
 
-  const priority = validPriorities.has(r.priority ?? "")
-    ? (r.priority as iMach360Ticket["priority"])
+  const normalizedPriority = (r.priority ?? "").toLowerCase().replace(/\s+/g, "-");
+  const priority = validPriorities.has(normalizedPriority)
+    ? (normalizedPriority as iMach360Ticket["priority"])
     : "medium";
 
-  const status = validStatuses.has(r.status ?? "")
-    ? (r.status as iMach360Ticket["status"])
+  const normalizedStatus = (r.status ?? "").toLowerCase().replace(/\s+/g, "-");
+  const mappedStatus = normalizedStatus === "in-progress" ? "in-progress"
+    : normalizedStatus === "resolved" ? "resolved"
+    : normalizedStatus === "closed" ? "closed"
+    : normalizedStatus === "open" ? "open"
+    : "open";
+  const status = validStatuses.has(mappedStatus)
+    ? (mappedStatus as iMach360Ticket["status"])
     : "open";
 
   const raisedBy =

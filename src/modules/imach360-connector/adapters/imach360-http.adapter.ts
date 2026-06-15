@@ -21,6 +21,8 @@ export class iMach360HttpAdapterImpl implements iMach360HttpAdapter {
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Accept-Encoding": "identity",
       "Authorization": `${token.type} ${token.value}`,
       ...request.headers
     };
@@ -53,13 +55,26 @@ export class iMach360HttpAdapterImpl implements iMach360HttpAdapter {
 
     let data: T;
 
+    let rawText: string;
     try {
-      data = (await response.json()) as T;
+      rawText = await response.text();
+    } catch (cause) {
+      throw new iMach360ConnectorError(
+        "IMACH360_RESPONSE_MAPPING_FAILED",
+        `Failed to read response body from iMach360 for ${request.method} ${request.path}`,
+        502,
+        { cause: cause instanceof Error ? cause.message : String(cause) }
+      );
+    }
+
+    try {
+      data = JSON.parse(rawText) as T;
     } catch {
       throw new iMach360ConnectorError(
         "IMACH360_RESPONSE_MAPPING_FAILED",
-        `Failed to parse iMach360 response for ${request.method} ${request.path}`,
-        502
+        `iMach360 returned non-JSON for ${request.method} ${request.path}`,
+        502,
+        { responsePreview: rawText.slice(0, 400) }
       );
     }
 

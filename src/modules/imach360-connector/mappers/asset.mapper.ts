@@ -9,9 +9,10 @@ interface ApiAsset {
   name?: string;
   assetType?: string;
   type?: string;
+  category?: string;
   status?: string;
   assignedTo?: string | { _id?: string };
-  assignedUser?: string | { name?: string; displayName?: string };
+  assignedUser?: string | { name?: string; displayName?: string; _id?: string };
 }
 
 const validStatuses = new Set(["available", "assigned", "maintenance", "retired"]);
@@ -21,7 +22,7 @@ export const mapAsset = (raw: unknown): iMach360Asset => {
 
   const id = r._id ?? r.id;
   const assetName = r.assetName ?? r.name;
-  const assetType = r.assetType ?? r.type;
+  const assetType = r.assetType ?? r.type ?? r.category;
 
   if (!id || !r.assetCode || !assetName || !assetType) {
     throw new iMach360ConnectorError(
@@ -32,7 +33,7 @@ export const mapAsset = (raw: unknown): iMach360Asset => {
     );
   }
 
-  const rawStatus = r.status ?? "available";
+  const rawStatus = (r.status ?? "available").toLowerCase();
   const status = validStatuses.has(rawStatus)
     ? (rawStatus as iMach360Asset["status"])
     : "available";

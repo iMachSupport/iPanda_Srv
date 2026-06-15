@@ -4,6 +4,7 @@ import type { iMach360Leave, iMach360LeaveBalance } from "../contracts/imach360-
 interface ApiLeave {
   _id?: string;
   id?: string;
+  user?: string | { _id?: string };
   userId?: string | { _id?: string };
   leaveType?: string;
   fromDate?: string;
@@ -11,6 +12,7 @@ interface ApiLeave {
   reason?: string;
   status?: string;
   remarks?: string;
+  totalDays?: number;
   numberOfDays?: number;
   createdAt?: string;
 }
@@ -43,10 +45,12 @@ export const mapLeave = (raw: unknown): iMach360Leave => {
   const r = raw as ApiLeave;
 
   const id = r._id ?? r.id;
+
+  const rawUser = r.user ?? r.userId;
   const userId =
-    typeof r.userId === "object" && r.userId !== null
-      ? (r.userId._id ?? "")
-      : (r.userId ?? "");
+    typeof rawUser === "object" && rawUser !== null
+      ? (rawUser._id ?? "")
+      : (rawUser ?? "");
 
   if (!id || !r.leaveType || !r.fromDate || !r.toDate) {
     throw new iMach360ConnectorError(
@@ -58,8 +62,9 @@ export const mapLeave = (raw: unknown): iMach360Leave => {
   }
 
   const validStatuses = new Set(["pending", "approved", "rejected"]);
-  const status = validStatuses.has(r.status ?? "")
-    ? (r.status as "pending" | "approved" | "rejected")
+  const normalizedStatus = (r.status ?? "").toLowerCase();
+  const status = validStatuses.has(normalizedStatus)
+    ? (normalizedStatus as "pending" | "approved" | "rejected")
     : "pending";
 
   return {
@@ -68,7 +73,7 @@ export const mapLeave = (raw: unknown): iMach360Leave => {
     leaveType: r.leaveType,
     fromDate: r.fromDate,
     toDate: r.toDate,
-    numberOfDays: r.numberOfDays ?? computeWorkingDays(r.fromDate, r.toDate),
+    numberOfDays: r.numberOfDays ?? r.totalDays ?? computeWorkingDays(r.fromDate, r.toDate),
     reason: r.reason,
     status,
     remarks: r.remarks,
